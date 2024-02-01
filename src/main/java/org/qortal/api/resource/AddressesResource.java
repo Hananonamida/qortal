@@ -166,7 +166,7 @@ public class AddressesResource {
 			)
 		}
 	)
-	@ApiErrors({ApiError.PUBLIC_KEY_NOT_FOUND, ApiError.REPOSITORY_ISSUE})
+	@ApiErrors({ApiError.REPOSITORY_ISSUE})
 	public List<ApiOnlineAccount> getOnlineAccounts() {
 		List<OnlineAccountData> onlineAccounts = OnlineAccountsManager.getInstance().getOnlineAccounts();
 
@@ -176,11 +176,8 @@ public class AddressesResource {
 
 			for (OnlineAccountData onlineAccountData : onlineAccounts) {
 				RewardShareData rewardShareData = repository.getAccountRepository().getRewardShare(onlineAccountData.getPublicKey());
-				if (rewardShareData == null)
-					// This shouldn't happen?
-					throw ApiExceptionFactory.INSTANCE.createException(request, ApiError.PUBLIC_KEY_NOT_FOUND);
-
-				apiOnlineAccounts.add(new ApiOnlineAccount(onlineAccountData.getTimestamp(), onlineAccountData.getSignature(), onlineAccountData.getPublicKey(),
+				if (rewardShareData != null)
+					apiOnlineAccounts.add(new ApiOnlineAccount(onlineAccountData.getTimestamp(), onlineAccountData.getSignature(), onlineAccountData.getPublicKey(),
 						rewardShareData.getMintingAccount(), rewardShareData.getRecipient()));
 			}
 
