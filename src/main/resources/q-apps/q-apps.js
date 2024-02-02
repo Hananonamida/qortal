@@ -227,14 +227,20 @@ window.addEventListener("message", (event) => {
             if (data.identifier != null) url = url.concat("&identifier=" + data.identifier);
             if (data.name != null) url = url.concat("&name=" + data.name);
             if (data.names != null) data.names.forEach((x, i) => url = url.concat("&name=" + x));
+            if (data.title != null) url = url.concat("&title=" + data.title);
+            if (data.description != null) url = url.concat("&description=" + data.description);
             if (data.prefix != null) url = url.concat("&prefix=" + new Boolean(data.prefix).toString());
             if (data.exactMatchNames != null) url = url.concat("&exactmatchnames=" + new Boolean(data.exactMatchNames).toString());
             if (data.default != null) url = url.concat("&default=" + new Boolean(data.default).toString());
+            if (data.mode != null) url = url.concat("&mode=" + data.mode);
+            if (data.minLevel != null) url = url.concat("&minlevel=" + data.minLevel);
             if (data.includeStatus != null) url = url.concat("&includestatus=" + new Boolean(data.includeStatus).toString());
             if (data.includeMetadata != null) url = url.concat("&includemetadata=" + new Boolean(data.includeMetadata).toString());
             if (data.nameListFilter != null) url = url.concat("&namefilter=" + data.nameListFilter);
             if (data.followedOnly != null) url = url.concat("&followedonly=" + new Boolean(data.followedOnly).toString());
             if (data.excludeBlocked != null) url = url.concat("&excludeblocked=" + new Boolean(data.excludeBlocked).toString());
+            if (data.before != null) url = url.concat("&before=" + data.before);
+            if (data.after != null) url = url.concat("&after=" + data.after);
             if (data.limit != null) url = url.concat("&limit=" + data.limit);
             if (data.offset != null) url = url.concat("&offset=" + data.offset);
             if (data.reverse != null) url = url.concat("&reverse=" + new Boolean(data.reverse).toString());
@@ -448,6 +454,10 @@ function getDefaultTimeout(action) {
                 // User may take a long time to accept/deny the popup
                 return 60 * 60 * 1000;
 
+            case "SEARCH_QDN_RESOURCES":
+                // Searching for data can be slow, especially when metadata and statuses are also being included
+                return 30 * 1000;
+
             case "FETCH_QDN_RESOURCE":
                 // Fetching data can take a while, especially if the status hasn't been checked first
                 return 60 * 1000;
@@ -466,6 +476,10 @@ function getDefaultTimeout(action) {
             case "SEND_COIN":
                 // Allow extra time for other actions that create transactions, even if there is no PoW
                 return 5 * 60 * 1000;
+
+            case "GET_WALLET_BALANCE":
+                // Getting a wallet balance can take a while, if there are many transactions
+                return 2 * 60 * 1000;
 
             default:
                 break;

@@ -1,5 +1,6 @@
 package org.qortal.arbitrary.misc;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FilenameUtils;
 import org.json.JSONObject;
 import org.qortal.arbitrary.ArbitraryDataRenderer;
@@ -12,8 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toMap;
@@ -186,6 +185,7 @@ public enum Service {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String encryptedDataPrefix = "qortalEncryptedData";
+    private static final String encryptedGroupDataPrefix = "qortalGroupEncryptedData";
 
     Service(int value, boolean requiresValidation, Long maxSize, boolean single, boolean isPrivate, List<String> requiredKeys) {
         this.value = value;
@@ -221,10 +221,10 @@ public enum Service {
         // Validate private data for single file resources
         if (this.single) {
             String dataString = new String(data, StandardCharsets.UTF_8);
-            if (this.isPrivate && !dataString.startsWith(encryptedDataPrefix)) {
+            if (this.isPrivate && !dataString.startsWith(encryptedDataPrefix) && !dataString.startsWith(encryptedGroupDataPrefix)) {
                 return ValidationResult.DATA_NOT_ENCRYPTED;
             }
-            if (!this.isPrivate && dataString.startsWith(encryptedDataPrefix)) {
+            if (!this.isPrivate && (dataString.startsWith(encryptedDataPrefix) || dataString.startsWith(encryptedGroupDataPrefix))) {
                 return ValidationResult.DATA_ENCRYPTED;
             }
         }

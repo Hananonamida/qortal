@@ -1,14 +1,5 @@
 package org.qortal.controller;
 
-import java.math.BigInteger;
-import java.security.SecureRandom;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.qortal.account.Account;
@@ -34,6 +25,15 @@ import org.qortal.transaction.Transaction;
 import org.qortal.utils.Base58;
 import org.qortal.utils.ByteArray;
 import org.qortal.utils.NTP;
+
+import java.math.BigInteger;
+import java.security.SecureRandom;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 public class Synchronizer extends Thread {
 
@@ -229,13 +229,6 @@ public class Synchronizer extends Thread {
 		peers.removeIf(Controller.hasOldVersion);
 
 		checkRecoveryModeForPeers(peers);
-		if (recoveryMode) {
-			// Needs a mutable copy of the unmodifiableList
-			peers = new ArrayList<>(Network.getInstance().getImmutableHandshakedPeers());
-			peers.removeIf(Controller.hasOnlyGenesisBlock);
-			peers.removeIf(Controller.hasMisbehaved);
-			peers.removeIf(Controller.hasOldVersion);
-		}
 
 		// Check we have enough peers to potentially synchronize
 		if (peers.size() < Settings.getInstance().getMinBlockchainPeers())
@@ -262,10 +255,7 @@ public class Synchronizer extends Thread {
 		peers.removeIf(Controller.hasInferiorChainTip);
 
 		// Remove any peers that are no longer on a recent block since the last check
-		// Except for times when we're in recovery mode, in which case we need to keep them
-		if (!recoveryMode) {
-			peers.removeIf(Controller.hasNoRecentBlock);
-		}
+		peers.removeIf(Controller.hasNoRecentBlock);
 
 		final int peersRemoved = peersBeforeComparison - peers.size();
 		if (peersRemoved > 0 && peers.size() > 0)
@@ -1340,8 +1330,8 @@ public class Synchronizer extends Thread {
 				return SynchronizationResult.INVALID_DATA;
 			}
 
-			// Final check to make sure the peer isn't out of date (except for when we're in recovery mode)
-			if (!recoveryMode && peer.getChainTipData() != null) {
+			// Final check to make sure the peer isn't out of date
+			if (peer.getChainTipData() != null) {
 				final Long minLatestBlockTimestamp = Controller.getMinimumLatestBlockTimestamp();
 				final Long peerLastBlockTimestamp = peer.getChainTipData().getTimestamp();
 				if (peerLastBlockTimestamp == null || peerLastBlockTimestamp < minLatestBlockTimestamp) {

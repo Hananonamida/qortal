@@ -1,12 +1,9 @@
 package org.qortal.transaction;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 import org.qortal.account.Account;
 import org.qortal.account.PublicKeyAccount;
 import org.qortal.asset.Asset;
+import org.qortal.block.Block;
 import org.qortal.block.BlockChain;
 import org.qortal.crypto.Crypto;
 import org.qortal.data.account.RewardShareData;
@@ -15,6 +12,10 @@ import org.qortal.data.transaction.TransactionData;
 import org.qortal.repository.DataException;
 import org.qortal.repository.Repository;
 import org.qortal.transform.Transformer;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class RewardShareTransaction extends Transaction {
 
@@ -178,6 +179,23 @@ public class RewardShareTransaction extends Transaction {
 	@Override
 	public void preProcess() throws DataException {
 		// Nothing to do
+	}
+
+	@Override
+	public boolean isConfirmableAtHeight(int height) {
+		final int min = BlockChain.getInstance().getPenaltyFixHeight() - 50;
+		final int max = BlockChain.getInstance().getPenaltyFixHeight() + 50;
+		if (height >= BlockChain.getInstance().getUnconfirmableRewardSharesHeight()) {
+			// Not confirmable in online accounts or distribution blocks
+			if (Block.isOnlineAccountsBlock(height) || Block.isBatchRewardDistributionBlock(height)) {
+				return false;
+			}
+		}
+		// Not confirmable on penalty fix
+		if (height > min && height < max) {
+			return false;
+		}
+		return true;
 	}
 
 	@Override

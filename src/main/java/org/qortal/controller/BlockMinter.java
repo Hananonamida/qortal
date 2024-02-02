@@ -1,16 +1,5 @@
 package org.qortal.controller;
 
-import java.math.BigInteger;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.qortal.account.Account;
@@ -23,6 +12,7 @@ import org.qortal.data.account.RewardShareData;
 import org.qortal.data.block.BlockData;
 import org.qortal.data.block.BlockSummaryData;
 import org.qortal.data.block.CommonBlockData;
+import org.qortal.data.network.OnlineAccountData;
 import org.qortal.data.transaction.TransactionData;
 import org.qortal.network.Network;
 import org.qortal.network.Peer;
@@ -35,7 +25,19 @@ import org.qortal.transaction.Transaction;
 import org.qortal.utils.Base58;
 import org.qortal.utils.NTP;
 
+import java.math.BigInteger;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
+
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 // Minting new blocks
 
@@ -124,10 +126,6 @@ public class BlockMinter extends Thread {
 
 					final Long minLatestBlockTimestamp = Controller.getMinimumLatestBlockTimestamp();
 					if (minLatestBlockTimestamp == null)
-						continue;
-
-					// No online accounts for current timestamp? (e.g. during startup)
-					if (!OnlineAccountsManager.getInstance().hasOnlineAccounts())
 						continue;
 
 					List<MintingAccountData> mintingAccountsData = repository.getAccountRepository().getMintingAccounts();
@@ -380,8 +378,12 @@ public class BlockMinter extends Thread {
 						parentSignatureForLastLowWeightBlock = null;
 						timeOfLastLowWeightBlock = null;
 
+						Long unconfirmedStartTime = NTP.getTime();
+
 						// Add unconfirmed transactions
 						addUnconfirmedTransactions(repository, newBlock);
+
+						LOGGER.info(String.format("Adding %d unconfirmed transactions took %d ms", newBlock.getTransactions().size(), (NTP.getTime()-unconfirmedStartTime)));
 
 						// Sign to create block's signature
 						newBlock.sign();
@@ -472,6 +474,7 @@ public class BlockMinter extends Thread {
 
 		Iterator<TransactionData> unconfirmedTransactionsIterator = unconfirmedTransactions.iterator();
 		final long newBlockTimestamp = newBlock.getBlockData().getTimestamp();
+		final int newBlockHeight = newBlock.getBlockData().getHeight();
 		while (unconfirmedTransactionsIterator.hasNext()) {
 			TransactionData transactionData = unconfirmedTransactionsIterator.next();
 
@@ -479,10 +482,19 @@ public class BlockMinter extends Thread {
 			// Ignore transactions that have expired before this block - they will be cleaned up later
 			if (transactionData.getTimestamp() > newBlockTimestamp || Transaction.getDeadline(transactionData) <= newBlockTimestamp)
 				unconfirmedTransactionsIterator.remove();
+
+			// Ignore transactions that are unconfirmable at this block height
+			Transaction transaction = Transaction.fromData(repository, transactionData);
+			if (!transaction.isConfirmableAtHeight(newBlockHeight)) {
+				unconfirmedTransactionsIterator.remove();
+			}
 		}
 
 		// Sign to create block's signature, needed by Block.isValid()
 		newBlock.sign();
+
+		// User-defined limit per block
+		int limit = Settings.getInstance().getMaxTransactionsPerBlock();
 
 		// Attempt to add transactions until block is full, or we run out
 		// If a transaction makes the block invalid then skip it and it'll either expire or be in next block.
@@ -495,6 +507,12 @@ public class BlockMinter extends Thread {
 			if (validationResult != ValidationResult.OK) {
 				LOGGER.debug(() -> String.format("Skipping invalid transaction %s during block minting", Base58.encode(transactionData.getSignature())));
 				newBlock.deleteTransaction(transactionData);
+			}
+
+			// User-defined limit per block
+			List<Transaction> transactions = newBlock.getTransactions();
+			if (transactions != null && transactions.size() >= limit) {
+				break;
 			}
 		}
 	}
@@ -532,6 +550,18 @@ public class BlockMinter extends Thread {
 		return mintTestingBlockRetainingTimestamps(repository, mintingAccount);
 	}
 
+	public static Block mintTestingBlockUnvalidatedWithoutOnlineAccounts(Repository repository, PrivateKeyAccount mintingAccount) throws DataException {
+		if (!BlockChain.getInstance().isTestChain())
+			throw new DataException("Ignoring attempt to mint testing block for non-test chain!");
+
+		// Make sure there are no online accounts
+		OnlineAccountsManager.getInstance().removeAllOnlineAccounts();
+		List<OnlineAccountData> onlineAccounts = OnlineAccountsManager.getInstance().getOnlineAccounts();
+		assertTrue(onlineAccounts.isEmpty());
+
+		return mintTestingBlockRetainingTimestamps(repository, mintingAccount);
+	}
+
 	public static Block mintTestingBlockRetainingTimestamps(Repository repository, PrivateKeyAccount mintingAccount) throws DataException {
 		BlockData previousBlockData = repository.getBlockRepository().getLastBlock();
 
@@ -548,6 +578,9 @@ public class BlockMinter extends Thread {
 
 			// Sign to create block's signature
 			newBlock.sign();
+
+			// Ensure online accounts are fully re-validated in this final check
+			newBlock.clearOnlineAccountsValidationCache();
 
 			// Is newBlock still valid?
 			ValidationResult validationResult = newBlock.isValid();

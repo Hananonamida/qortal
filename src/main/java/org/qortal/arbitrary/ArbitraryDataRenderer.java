@@ -6,7 +6,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.qortal.api.HTMLParser;
-import org.qortal.arbitrary.ArbitraryDataFile.*;
+import org.qortal.arbitrary.ArbitraryDataFile.ResourceIdType;
 import org.qortal.arbitrary.exception.MissingDataException;
 import org.qortal.arbitrary.misc.Service;
 import org.qortal.controller.Controller;
@@ -40,7 +40,7 @@ public class ArbitraryDataRenderer {
     private String inPath;
     private final String secret58;
     private final String prefix;
-    private final boolean usePrefix;
+    private final boolean includeResourceIdInPrefix;
     private final boolean async;
     private final String qdnContext;
     private final HttpServletRequest request;
@@ -48,7 +48,7 @@ public class ArbitraryDataRenderer {
     private final ServletContext context;
 
     public ArbitraryDataRenderer(String resourceId, ResourceIdType resourceIdType, Service service, String identifier,
-                                 String inPath, String secret58, String prefix, boolean usePrefix, boolean async, String qdnContext,
+                                 String inPath, String secret58, String prefix, boolean includeResourceIdInPrefix, boolean async, String qdnContext,
                                  HttpServletRequest request, HttpServletResponse response, ServletContext context) {
 
         this.resourceId = resourceId;
@@ -58,7 +58,7 @@ public class ArbitraryDataRenderer {
         this.inPath = inPath;
         this.secret58 = secret58;
         this.prefix = prefix;
-        this.usePrefix = usePrefix;
+        this.includeResourceIdInPrefix = includeResourceIdInPrefix;
         this.async = async;
         this.qdnContext = qdnContext;
         this.request = request;
@@ -76,9 +76,11 @@ public class ArbitraryDataRenderer {
             return ArbitraryDataRenderer.getResponse(response, 500, "QDN is disabled in settings");
         }
 
-        ArbitraryDataReader arbitraryDataReader = new ArbitraryDataReader(resourceId, resourceIdType, service, identifier);
-        arbitraryDataReader.setSecret58(secret58); // Optional, used for loading encrypted file hashes only
+        ArbitraryDataReader arbitraryDataReader;
         try {
+            arbitraryDataReader = new ArbitraryDataReader(resourceId, resourceIdType, service, identifier);
+            arbitraryDataReader.setSecret58(secret58); // Optional, used for loading encrypted file hashes only
+
             if (!arbitraryDataReader.isCachedDataAvailable()) {
                 // If async is requested, show a loading screen whilst build is in progress
                 if (async) {
@@ -127,6 +129,11 @@ public class ArbitraryDataRenderer {
             String filename = this.getFilename(unzippedPath, inPath);
             Path filePath = Paths.get(unzippedPath, filename);
             boolean usingCustomRouting = false;
+            if (Files.isDirectory(filePath) && (!inPath.endsWith("/"))) {
+                inPath = inPath + "/";
+                filename = this.getFilename(unzippedPath, inPath);
+                filePath = Paths.get(unzippedPath, filename);
+            }
             
             // If the file doesn't exist, we may need to route the request elsewhere, or cleanup
             if (!Files.exists(filePath)) {
@@ -159,7 +166,7 @@ public class ArbitraryDataRenderer {
             if (HTMLParser.isHtmlFile(filename)) {
                 // HTML file - needs to be parsed
                 byte[] data = Files.readAllBytes(filePath); // TODO: limit file size that can be read into memory
-                HTMLParser htmlParser = new HTMLParser(resourceId, inPath, prefix, usePrefix, data, qdnContext, service, identifier, theme, usingCustomRouting);
+                HTMLParser htmlParser = new HTMLParser(resourceId, inPath, prefix, includeResourceIdInPrefix, data, qdnContext, service, identifier, theme, usingCustomRouting);
                 htmlParser.addAdditionalHeaderTags();
                 response.addHeader("Content-Security-Policy", "default-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src 'self' data: blob:; img-src 'self' data: blob:;");
                 response.setContentType(context.getMimeType(filename));

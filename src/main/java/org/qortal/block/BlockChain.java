@@ -1,21 +1,5 @@
 package org.qortal.block;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.locks.ReentrantLock;
-
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.UnmarshalException;
-import javax.xml.bind.Unmarshaller;
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-import javax.xml.transform.stream.StreamSource;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.persistence.exceptions.XMLMarshalException;
@@ -28,6 +12,21 @@ import org.qortal.repository.*;
 import org.qortal.settings.Settings;
 import org.qortal.utils.Base58;
 import org.qortal.utils.StringLongMapXmlAdapter;
+
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.UnmarshalException;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import javax.xml.transform.stream.StreamSource;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Class representing the blockchain as a whole.
@@ -47,9 +46,6 @@ public class BlockChain {
 
 	/** Transaction expiry period, starting from transaction's timestamp, in milliseconds. */
 	private long transactionExpiryPeriod;
-
-	@XmlJavaTypeAdapter(value = org.qortal.api.AmountTypeAdapter.class)
-	private long unitFee;
 
 	private int maxBytesPerUnitFee;
 
@@ -77,9 +73,14 @@ public class BlockChain {
 		increaseOnlineAccountsDifficultyTimestamp,
 		onlineAccountMinterLevelValidationHeight,
 		selfSponsorshipAlgoV1Height,
+		selfSponsorshipAlgoV2Height,
 		feeValidationFixTimestamp,
 		chatReferenceTimestamp,
-		arbitraryOptionalFeeTimestamp;
+		arbitraryOptionalFeeTimestamp,
+		unconfirmableRewardSharesHeight,
+		disableTransferPrivsTimestamp,
+		enableTransferPrivsTimestamp,
+		penaltyFixHeight
 	}
 
 	// Custom transaction fees
@@ -89,6 +90,7 @@ public class BlockChain {
 		@XmlJavaTypeAdapter(value = org.qortal.api.AmountTypeAdapter.class)
 		public long fee;
 	}
+	private List<UnitFeesByTimestamp> unitFees;
 	private List<UnitFeesByTimestamp> nameRegistrationUnitFees;
 
 	/** Map of which blockchain features are enabled when (height/timestamp) */
@@ -201,6 +203,7 @@ public class BlockChain {
 
 	/** Minimum time to retain online account signatures (ms) for block validity checks. */
 	private long onlineAccountSignaturesMinLifetime;
+
 	/** Maximum time to retain online account signatures (ms) for block validity checks, to allow for clock variance. */
 	private long onlineAccountSignaturesMaxLifetime;
 
@@ -210,6 +213,27 @@ public class BlockChain {
 
 	/** Snapshot timestamp for self sponsorship algo V1 */
 	private long selfSponsorshipAlgoV1SnapshotTimestamp;
+
+	/** Snapshot timestamp for self sponsorship algo V2 */
+	private long selfSponsorshipAlgoV2SnapshotTimestamp;
+
+	/** Feature-trigger timestamp to modify behaviour of various transactions that support mempow */
+	private long mempowTransactionUpdatesTimestamp;
+
+	/** Feature trigger block height for batch block reward payouts.
+	 * This MUST be a multiple of blockRewardBatchSize. Can't use
+	 * featureTriggers because unit tests need to set this value via Reflection. */
+	private int blockRewardBatchStartHeight;
+
+	/** Block reward batch size. Must be (significantly) less than block prune size,
+	 * as all blocks in the range need to be present in the repository when processing/orphaning */
+	private int blockRewardBatchSize;
+
+	/** Number of blocks prior to the batch reward distribution blocks to include online accounts
+	 * data and to base online accounts decisions on. */
+	private int blockRewardBatchAccountsBlockCount;
+
+	private String penaltyFixHash;
 
 	/** Max reward shares by block height */
 	public static class MaxRewardSharesByTimestamp {
@@ -253,7 +277,7 @@ public class BlockChain {
 		try {
 			// Create JAXB context aware of Settings
 			jc = JAXBContextFactory.createContext(new Class[] {
-				BlockChain.class, GenesisBlock.GenesisInfo.class
+					BlockChain.class, GenesisBlock.GenesisInfo.class
 			}, null);
 
 			// Create unmarshaller
@@ -346,10 +370,6 @@ public class BlockChain {
 		return this.isTestChain;
 	}
 
-	public long getUnitFee() {
-		return this.unitFee;
-	}
-
 	public int getMaxBytesPerUnitFee() {
 		return this.maxBytesPerUnitFee;
 	}
@@ -371,9 +391,37 @@ public class BlockChain {
 		return this.onlineAccountsModulusV2Timestamp;
 	}
 
-	// Self sponsorship algo
+
+	/* Block reward batching */
+	public long getBlockRewardBatchStartHeight() {
+		return this.blockRewardBatchStartHeight;
+	}
+
+	public int getBlockRewardBatchSize() {
+		return this.blockRewardBatchSize;
+	}
+
+	public int getBlockRewardBatchAccountsBlockCount() {
+		return this.blockRewardBatchAccountsBlockCount;
+	}
+
+	public String getPenaltyFixHash() {
+		return this.penaltyFixHash;
+	}
+
+	// Self sponsorship algo V1
 	public long getSelfSponsorshipAlgoV1SnapshotTimestamp() {
 		return this.selfSponsorshipAlgoV1SnapshotTimestamp;
+	}
+
+	// Self sponsorship algo V2
+	public long getSelfSponsorshipAlgoV2SnapshotTimestamp() {
+		return this.selfSponsorshipAlgoV2SnapshotTimestamp;
+	}
+
+	// Feature-trigger timestamp to modify behaviour of various transactions that support mempow
+	public long getMemPoWTransactionUpdatesTimestamp() {
+		return this.mempowTransactionUpdatesTimestamp;
 	}
 
 	/** Returns true if approval-needing transaction types require a txGroupId other than NO_GROUP. */
@@ -511,6 +559,10 @@ public class BlockChain {
 		return this.featureTriggers.get(FeatureTrigger.selfSponsorshipAlgoV1Height.name()).intValue();
 	}
 
+	public int getSelfSponsorshipAlgoV2Height() {
+		return this.featureTriggers.get(FeatureTrigger.selfSponsorshipAlgoV2Height.name()).intValue();
+	}
+
 	public long getOnlineAccountMinterLevelValidationHeight() {
 		return this.featureTriggers.get(FeatureTrigger.onlineAccountMinterLevelValidationHeight.name()).intValue();
 	}
@@ -527,6 +579,21 @@ public class BlockChain {
 		return this.featureTriggers.get(FeatureTrigger.arbitraryOptionalFeeTimestamp.name()).longValue();
 	}
 
+	public int getUnconfirmableRewardSharesHeight() {
+		return this.featureTriggers.get(FeatureTrigger.unconfirmableRewardSharesHeight.name()).intValue();
+	}
+
+	public long getDisableTransferPrivsTimestamp() {
+		return this.featureTriggers.get(FeatureTrigger.disableTransferPrivsTimestamp.name()).longValue();
+	}
+
+	public long getEnableTransferPrivsTimestamp() {
+		return this.featureTriggers.get(FeatureTrigger.enableTransferPrivsTimestamp.name()).longValue();
+	}
+
+	public int getPenaltyFixHeight() {
+		return this.featureTriggers.get(FeatureTrigger.penaltyFixHeight.name()).intValue();
+	}
 
 	// More complex getters for aspects that change by height or timestamp
 
@@ -547,13 +614,22 @@ public class BlockChain {
 		throw new IllegalStateException(String.format("No block timing info available for height %d", ourHeight));
 	}
 
+	public long getUnitFeeAtTimestamp(long ourTimestamp) {
+		for (int i = unitFees.size() - 1; i >= 0; --i)
+			if (unitFees.get(i).timestamp <= ourTimestamp)
+				return unitFees.get(i).fee;
+
+		// Shouldn't happen, but set a sensible default just in case
+		return 100000;
+	}
+
 	public long getNameRegistrationUnitFeeAtTimestamp(long ourTimestamp) {
 		for (int i = nameRegistrationUnitFees.size() - 1; i >= 0; --i)
 			if (nameRegistrationUnitFees.get(i).timestamp <= ourTimestamp)
 				return nameRegistrationUnitFees.get(i).fee;
 
-		// Default to system-wide unit fee
-		return this.getUnitFee();
+		// Shouldn't happen, but set a sensible default just in case
+		return 100000;
 	}
 
 	public int getMaxRewardSharesAtTimestamp(long ourTimestamp) {
@@ -642,6 +718,22 @@ public class BlockChain {
 
 		if (totalShareV2 < 0 || totalShareV2 > 1_00000000L)
 			Settings.throwValidationError("Total non-founder share out of bounds (0<x<1e8)");
+
+		// Check that blockRewardBatchSize isn't zero
+		if (this.blockRewardBatchSize <= 0)
+			Settings.throwValidationError("\"blockRewardBatchSize\" must be greater than 0");
+
+		// Check that blockRewardBatchStartHeight is a multiple of blockRewardBatchSize
+		if (this.blockRewardBatchStartHeight % this.blockRewardBatchSize != 0)
+			Settings.throwValidationError("\"blockRewardBatchStartHeight\" must be a multiple of \"blockRewardBatchSize\"");
+
+		// Check that blockRewardBatchAccountsBlockCount isn't zero
+		if (this.blockRewardBatchAccountsBlockCount <= 0)
+			Settings.throwValidationError("\"blockRewardBatchAccountsBlockCount\" must be greater than 0");
+
+		// Check that blockRewardBatchSize isn't zero
+		if (this.blockRewardBatchAccountsBlockCount > this.blockRewardBatchSize)
+			Settings.throwValidationError("\"blockRewardBatchAccountsBlockCount\" must be less than or equal to \"blockRewardBatchSize\"");
 	}
 
 	/** Minor normalization, cached value generation, etc. */
@@ -688,7 +780,7 @@ public class BlockChain {
 
 	/**
 	 * Some sort of start-up/initialization/checking method.
-	 * 
+	 *
 	 * @throws SQLException
 	 */
 	public static void validate() throws DataException {

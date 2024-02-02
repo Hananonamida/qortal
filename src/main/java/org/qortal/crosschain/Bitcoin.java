@@ -1,10 +1,5 @@
 package org.qortal.crosschain;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.EnumMap;
-import java.util.Map;
-
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
@@ -12,8 +7,13 @@ import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.qortal.crosschain.ElectrumX.Server;
-import org.qortal.crosschain.ElectrumX.Server.ConnectionType;
+import org.qortal.crosschain.ChainableServer.ConnectionType;
 import org.qortal.settings.Settings;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumMap;
+import java.util.Map;
 
 public class Bitcoin extends Bitcoiny {
 
@@ -44,89 +44,66 @@ public class Bitcoin extends Bitcoiny {
 			@Override
 			public Collection<ElectrumX.Server> getServers() {
 				return Arrays.asList(
-						// Servers chosen on NO BASIS WHATSOEVER from various sources!
-						// Status verified at https://1209k.com/bitcoin-eye/ele.php?chain=btc
-						//CLOSED new Server("bitcoin.grey.pw", Server.ConnectionType.SSL, 50002),
-						//CLOSED new Server("btc.litepay.ch", Server.ConnectionType.SSL, 50002),
-						//CLOSED new Server("electrum.pabu.io", Server.ConnectionType.SSL, 50002),
-						//CLOSED new Server("electrumx.dev", Server.ConnectionType.SSL, 50002),
-						//CLOSED new Server("electrumx.hodlwallet.com", Server.ConnectionType.SSL, 50002),
-						//CLOSED new Server("gd42.org", Server.ConnectionType.SSL, 50002),
-						//CLOSED new Server("korea.electrum-server.com", Server.ConnectionType.SSL, 50002),
-						//CLOSED new Server("prospero.bitsrc.net", Server.ConnectionType.SSL, 50002),
-						//1.15.0 new Server("alviss.coinjoined.com", Server.ConnectionType.SSL, 50002),
-						//1.15.0 new Server("electrum.acinq.co", Server.ConnectionType.SSL, 50002),
-						//1.14.0 new Server("electrum.coinext.com.br", Server.ConnectionType.SSL, 50002),
-						//F1.7.0 new Server("btc.lastingcoin.net", Server.ConnectionType.SSL, 50002),
-						new Server("104.248.139.211", Server.ConnectionType.SSL, 50002),
-						new Server("128.0.190.26", Server.ConnectionType.SSL, 50002),
-						new Server("142.93.6.38", Server.ConnectionType.SSL, 50002),
-						new Server("157.245.172.236", Server.ConnectionType.SSL, 50002),
-						new Server("167.172.226.175", Server.ConnectionType.SSL, 50002),
-						new Server("167.172.42.31", Server.ConnectionType.SSL, 50002),
-						new Server("178.62.80.20", Server.ConnectionType.SSL, 50002),
-						new Server("185.64.116.15", Server.ConnectionType.SSL, 50002),
-						new Server("188.165.206.215", Server.ConnectionType.SSL, 50002),
-						new Server("188.165.211.112", Server.ConnectionType.SSL, 50002),
-						new Server("2azzarita.hopto.org", Server.ConnectionType.SSL, 50002),
-						new Server("2electrumx.hopto.me", Server.ConnectionType.SSL, 56022),
-						new Server("2ex.digitaleveryware.com", Server.ConnectionType.SSL, 50002),
-						new Server("65.39.140.37", Server.ConnectionType.SSL, 50002),
-						new Server("68.183.188.105", Server.ConnectionType.SSL, 50002),
-						new Server("71.73.14.254", Server.ConnectionType.SSL, 50002),
-						new Server("94.23.247.135", Server.ConnectionType.SSL, 50002),
-						new Server("assuredly.not.fyi", Server.ConnectionType.SSL, 50002),
-						new Server("ax101.blockeng.ch", Server.ConnectionType.SSL, 50002),
-						new Server("ax102.blockeng.ch", Server.ConnectionType.SSL, 50002),
-						new Server("b.1209k.com", Server.ConnectionType.SSL, 50002),
-						new Server("b6.1209k.com", Server.ConnectionType.SSL, 50002),
-						new Server("bitcoin.dermichi.com", Server.ConnectionType.SSL, 50002),
-						new Server("bitcoin.lu.ke", Server.ConnectionType.SSL, 50002),
-						new Server("bitcoin.lukechilds.co", Server.ConnectionType.SSL, 50002),
-						new Server("blkhub.net", Server.ConnectionType.SSL, 50002),
-						new Server("btc.electroncash.dk", Server.ConnectionType.SSL, 60002),
-						new Server("btc.ocf.sh", Server.ConnectionType.SSL, 50002),
-						new Server("btce.iiiiiii.biz", Server.ConnectionType.SSL, 50002),
-						new Server("caleb.vegas", Server.ConnectionType.SSL, 50002),
-						new Server("eai.coincited.net", Server.ConnectionType.SSL, 50002),
-						new Server("electrum.bhoovd.com", Server.ConnectionType.SSL, 50002),
-						new Server("electrum.bitaroo.net", Server.ConnectionType.SSL, 50002),
-						new Server("electrum.bitcoinlizard.net", Server.ConnectionType.SSL, 50002),
-						new Server("electrum.blockstream.info", Server.ConnectionType.SSL, 50002),
-						new Server("electrum.emzy.de", Server.ConnectionType.SSL, 50002),
-						new Server("electrum.exan.tech", Server.ConnectionType.SSL, 50002),
-						new Server("electrum.kendigisland.xyz", Server.ConnectionType.SSL, 50002),
-						new Server("electrum.mmitech.info", Server.ConnectionType.SSL, 50002),
-						new Server("electrum.petrkr.net", Server.ConnectionType.SSL, 50002),
-						new Server("electrum.stippy.com", Server.ConnectionType.SSL, 50002),
-						new Server("electrum.thomasfischbach.de", Server.ConnectionType.SSL, 50002),
-						new Server("electrum0.snel.it", Server.ConnectionType.SSL, 50002),
-						new Server("electrum1.cipig.net", Server.ConnectionType.SSL, 50002),
-						new Server("electrum2.cipig.net", Server.ConnectionType.SSL, 50002),
-						new Server("electrum3.cipig.net", Server.ConnectionType.SSL, 50002),
-						new Server("electrumx.alexridevski.net", Server.ConnectionType.SSL, 50002),
-						new Server("electrumx-core.1209k.com", Server.ConnectionType.SSL, 50002),
-						new Server("elx.bitske.com", Server.ConnectionType.SSL, 50002),
-						new Server("ex03.axalgo.com", Server.ConnectionType.SSL, 50002),
-						new Server("ex05.axalgo.com", Server.ConnectionType.SSL, 50002),
-						new Server("ex07.axalgo.com", Server.ConnectionType.SSL, 50002),
-						new Server("fortress.qtornado.com", Server.ConnectionType.SSL, 50002),
-						new Server("fulcrum.grey.pw", Server.ConnectionType.SSL, 50002),
-						new Server("fulcrum.sethforprivacy.com", Server.ConnectionType.SSL, 51002),
-						new Server("guichet.centure.cc", Server.ConnectionType.SSL, 50002),
-						new Server("hodlers.beer", Server.ConnectionType.SSL, 50002),
-						new Server("kareoke.qoppa.org", Server.ConnectionType.SSL, 50002),
-						new Server("kirsche.emzy.de", Server.ConnectionType.SSL, 50002),
-						new Server("node1.btccuracao.com", Server.ConnectionType.SSL, 50002),
-						new Server("osr1ex1.compumundohipermegared.one", Server.ConnectionType.SSL, 50002),
-						new Server("smmalis37.ddns.net", Server.ConnectionType.SSL, 50002),
-						new Server("ulrichard.ch", Server.ConnectionType.SSL, 50002),
-						new Server("vmd104012.contaboserver.net", Server.ConnectionType.SSL, 50002),
-						new Server("vmd104014.contaboserver.net", Server.ConnectionType.SSL, 50002),
-						new Server("vmd63185.contaboserver.net", Server.ConnectionType.SSL, 50002),
-						new Server("vmd71287.contaboserver.net", Server.ConnectionType.SSL, 50002),
-						new Server("vmd84592.contaboserver.net", Server.ConnectionType.SSL, 50002),
-						new Server("xtrum.com", Server.ConnectionType.SSL, 50002));
+					// Servers chosen on NO BASIS WHATSOEVER from various sources!
+					// Status verified at https://1209k.com/bitcoin-eye/ele.php?chain=btc
+					new Server("104.198.149.61", Server.ConnectionType.SSL, 50002),
+					new Server("128.0.190.26", Server.ConnectionType.SSL, 50002),
+					new Server("157.245.172.236", Server.ConnectionType.SSL, 50002),
+					new Server("260.whyza.net", Server.ConnectionType.SSL, 50002),
+					new Server("34.136.93.37", Server.ConnectionType.SSL, 50002),
+					new Server("34.67.22.216", Server.ConnectionType.SSL, 50002),
+					new Server("34.68.133.78", Server.ConnectionType.SSL, 50002),
+					new Server("alviss.coinjoined.com", Server.ConnectionType.SSL, 50002),
+					new Server("b.1209k.com", Server.ConnectionType.SSL, 50002),
+					new Server("b6.1209k.com", Server.ConnectionType.SSL, 50002),
+					new Server("bitcoin.dermichi.com", Server.ConnectionType.SSL, 50002),
+					new Server("bitcoin.lu.ke", Server.ConnectionType.SSL, 50002),
+					new Server("bitcoin.lukechilds.co", Server.ConnectionType.SSL, 50002),
+					new Server("blkhub.net", Server.ConnectionType.SSL, 50002),
+					new Server("btc.aftrek.org", Server.ConnectionType.SSL, 50002),
+					new Server("btc.hodler.ninja", Server.ConnectionType.SSL, 50002),
+					new Server("btc.ocf.sh", Server.ConnectionType.SSL, 50002),
+					new Server("btce.iiiiiii.biz", Server.ConnectionType.SSL, 50002),
+					new Server("caleb.vegas", Server.ConnectionType.SSL, 50002),
+					new Server("d762li0k0g.d.firewalla.org", Server.ConnectionType.SSL, 50002),
+					new Server("de.poiuty.com", Server.ConnectionType.SSL, 50002),
+					new Server("dijon.anties.org", Server.ConnectionType.SSL, 50002),
+					new Server("eai.coincited.net", Server.ConnectionType.SSL, 50002),
+					new Server("electrum.bitaroo.net", Server.ConnectionType.SSL, 50002),
+					new Server("electrum.bitrefill.com", Server.ConnectionType.SSL, 50002),
+					new Server("electrum.brainshome.de", Server.ConnectionType.SSL, 50002),
+					new Server("electrum.emzy.de", Server.ConnectionType.SSL, 50002),
+					new Server("electrum.kcicom.net", Server.ConnectionType.SSL, 50002),
+					new Server("electrum.kendigisland.xyz", Server.ConnectionType.SSL, 50002),
+					new Server("electrum.thomasfischbach.de", Server.ConnectionType.SSL, 50002),
+					new Server("electrum-btc.leblancnet.us", Server.ConnectionType.SSL, 50002),
+					new Server("electrum0.snel.it", Server.ConnectionType.SSL, 50002),
+					new Server("electrum1.cipig.net", Server.ConnectionType.SSL, 20000),
+					new Server("electrum2.cipig.net", Server.ConnectionType.SSL, 20000),
+					new Server("electrum3.cipig.net", Server.ConnectionType.SSL, 20000),
+					new Server("electrumx.blockfinance-eco.li", Server.ConnectionType.SSL, 50002),
+					new Server("electrumx.indoor.app", Server.ConnectionType.SSL, 50002),
+					new Server("electrumx.iodata.org", Server.ConnectionType.SSL, 50002),
+					new Server("electrumx-core.1209k.com", Server.ConnectionType.SSL, 50002),
+					new Server("elx.bitske.com", Server.ConnectionType.SSL, 50002),
+					new Server("exs.dyshek.org", Server.ConnectionType.SSL, 50002),
+					new Server("fortress.qtornado.com", Server.ConnectionType.SSL, 50002),
+					new Server("guichet.centure.cc", Server.ConnectionType.SSL, 50002),
+					new Server("hodl.artyomk13.me", Server.ConnectionType.SSL, 50002),
+					new Server("hodlers.beer", Server.ConnectionType.SSL, 50002),
+					new Server("kareoke.qoppa.org", Server.ConnectionType.SSL, 50002),
+					new Server("kirsche.emzy.de", Server.ConnectionType.SSL, 50002),
+					new Server("kittyserver.ddnsfree.com", Server.ConnectionType.SSL, 50002),
+					new Server("lille.anties.org", Server.ConnectionType.SSL, 50002),
+					new Server("marseille.anties.org", Server.ConnectionType.SSL, 50002),
+					new Server("node1.btccuracao.com", Server.ConnectionType.SSL, 50002),
+					new Server("osr1ex1.compumundohipermegared.one", Server.ConnectionType.SSL, 50002),
+					new Server("paris.anties.org", Server.ConnectionType.SSL, 50002),
+					new Server("ragtor.duckdns.org", Server.ConnectionType.SSL, 50002),
+					new Server("stavver.dyshek.org", Server.ConnectionType.SSL, 50002),
+					new Server("vmd63185.contaboserver.net", Server.ConnectionType.SSL, 50002),
+					new Server("xtrum.com", Server.ConnectionType.SSL, 50002)
+				);
 			}
 
 			@Override
@@ -152,12 +129,18 @@ public class Bitcoin extends Bitcoiny {
 			@Override
 			public Collection<ElectrumX.Server> getServers() {
 				return Arrays.asList(
-						new Server("tn.not.fyi", Server.ConnectionType.SSL, 55002),
-						new Server("electrumx-test.1209k.com", Server.ConnectionType.SSL, 50002),
-						new Server("testnet.qtornado.com", Server.ConnectionType.SSL, 51002),
-						new Server("testnet.aranguren.org", Server.ConnectionType.TCP, 51001),
-						new Server("testnet.aranguren.org", Server.ConnectionType.SSL, 51002),
-						new Server("testnet.hsmiths.com", Server.ConnectionType.SSL, 53012));
+					new Server("bitcoin.devmole.eu", Server.ConnectionType.TCP, 5000),
+					new Server("bitcoin.stagemole.eu", Server.ConnectionType.TCP, 5000),
+					new Server("blockstream.info", Server.ConnectionType.SSL, 993),
+					new Server("electrum.blockstream.info", Server.ConnectionType.SSL, 60002),
+					new Server("electrum1.cipig.net", Server.ConnectionType.TCP, 10068),
+					new Server("electrum2.cipig.net", Server.ConnectionType.TCP, 10068),
+					new Server("electrum3.cipig.net", Server.ConnectionType.TCP, 10068),
+					new Server("testnet.aranguren.org", Server.ConnectionType.SSL, 51002),
+					new Server("testnet.hsmiths.com", Server.ConnectionType.SSL, 53012),
+					new Server("testnet.qtornado.com", Server.ConnectionType.SSL, 51002),
+					new Server("v22019051929289916.bestsrv.de", Server.ConnectionType.SSL, 50002)
+				);
 			}
 
 			@Override
@@ -179,8 +162,9 @@ public class Bitcoin extends Bitcoiny {
 			@Override
 			public Collection<ElectrumX.Server> getServers() {
 				return Arrays.asList(
-						new Server("localhost", Server.ConnectionType.TCP, 50001),
-						new Server("localhost", Server.ConnectionType.SSL, 50002));
+					new Server("localhost", Server.ConnectionType.TCP, 50001),
+					new Server("localhost", Server.ConnectionType.SSL, 50002)
+				);
 			}
 
 			@Override

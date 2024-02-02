@@ -1,12 +1,12 @@
 package org.qortal.repository;
 
-import java.util.List;
-
 import org.qortal.api.model.BlockSignerSummary;
 import org.qortal.data.block.BlockData;
 import org.qortal.data.block.BlockSummaryData;
 import org.qortal.data.block.BlockTransactionData;
 import org.qortal.data.transaction.TransactionData;
+
+import java.util.List;
 
 public interface BlockRepository {
 
@@ -131,6 +131,17 @@ public interface BlockRepository {
 	 * Returns blocks within height range.
 	 */
 	public List<BlockData> getBlocks(int firstBlockHeight, int lastBlockHeight) throws DataException;
+
+	/**
+	 * Returns blocks within height range.
+	 */
+	public Long getTotalFeesInBlockRange(int firstBlockHeight, int lastBlockHeight) throws DataException;
+
+	/**
+	 * Returns block with highest online accounts count in specified range. If more than one block
+	 * has the same high count, the oldest one is returned.
+	 */
+	public BlockData getBlockInRangeWithHighestOnlineAccountsCount(int firstBlockHeight, int lastBlockHeight) throws DataException;
 
 	/**
 	 * Returns block summaries for the passed height range.

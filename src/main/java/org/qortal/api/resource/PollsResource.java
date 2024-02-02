@@ -1,6 +1,8 @@
 package org.qortal.api.resource;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -8,10 +10,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.qortal.api.ApiError;
 import org.qortal.api.ApiErrors;
+import org.qortal.api.ApiException;
 import org.qortal.api.ApiExceptionFactory;
+import org.qortal.api.model.PollVotes;
+import org.qortal.crypto.Crypto;
+import org.qortal.data.account.AccountData;
 import org.qortal.data.transaction.CreatePollTransactionData;
-import org.qortal.data.transaction.PaymentTransactionData;
 import org.qortal.data.transaction.VoteOnPollTransactionData;
+import org.qortal.data.voting.PollData;
+import org.qortal.data.voting.PollOptionData;
+import org.qortal.data.voting.VoteOnPollData;
 import org.qortal.repository.DataException;
 import org.qortal.repository.Repository;
 import org.qortal.repository.RepositoryManager;
@@ -19,30 +27,17 @@ import org.qortal.settings.Settings;
 import org.qortal.transaction.Transaction;
 import org.qortal.transform.TransformationException;
 import org.qortal.transform.transaction.CreatePollTransactionTransformer;
-import org.qortal.transform.transaction.PaymentTransactionTransformer;
 import org.qortal.transform.transaction.VoteOnPollTransactionTransformer;
 import org.qortal.utils.Base58;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import javax.ws.rs.GET;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.QueryParam;
-import org.qortal.api.ApiException;
-import org.qortal.api.model.PollVotes;
-import org.qortal.data.voting.PollData;
-import org.qortal.data.voting.PollOptionData;
-import org.qortal.data.voting.VoteOnPollData;
 
 @Path("/polls")
 @Tag(name = "Polls")
@@ -136,12 +131,25 @@ public class PollsResource {
                     for (PollOptionData optionData : pollData.getPollOptions()) {
                             voteCountMap.put(optionData.getOptionName(), 0);
                     }
+                    // Initialize map for counting vote weights
+                    Map<String, Integer> voteWeightMap = new HashMap<>();
+                    for (PollOptionData optionData : pollData.getPollOptions()) {
+                            voteWeightMap.put(optionData.getOptionName(), 0);
+                    }
 
                     int totalVotes = 0;
+                    int totalWeight = 0;
                     for (VoteOnPollData vote : votes) {
+                            String voter = Crypto.toAddress(vote.getVoterPublicKey());
+                            AccountData voterData = repository.getAccountRepository().getAccount(voter);
+                            int voteWeight = voterData.getBlocksMinted() + voterData.getBlocksMintedPenalty();
+                            if (voteWeight < 0) voteWeight = 0;
+                            totalWeight += voteWeight;
+
                             String selectedOption = pollData.getPollOptions().get(vote.getOptionIndex()).getOptionName();
                             if (voteCountMap.containsKey(selectedOption)) {
                                     voteCountMap.put(selectedOption, voteCountMap.get(selectedOption) + 1);
+                                    voteWeightMap.put(selectedOption, voteWeightMap.get(selectedOption) + voteWeight);
                                     totalVotes++;
                             }
                     }
@@ -150,11 +158,15 @@ public class PollsResource {
                     List<PollVotes.OptionCount> voteCounts = voteCountMap.entrySet().stream()
                         .map(entry -> new PollVotes.OptionCount(entry.getKey(), entry.getValue()))
                         .collect(Collectors.toList());
+                    // Convert map to list of WeightInfo
+                    List<PollVotes.OptionWeight> voteWeights = voteWeightMap.entrySet().stream()
+                        .map(entry -> new PollVotes.OptionWeight(entry.getKey(), entry.getValue()))
+                        .collect(Collectors.toList());
     
                     if (onlyCounts != null && onlyCounts) {
-                        return new PollVotes(null, totalVotes, voteCounts);
+                        return new PollVotes(null, totalVotes, totalWeight, voteCounts, voteWeights);
                     } else {
-                        return new PollVotes(votes, totalVotes, voteCounts);
+                        return new PollVotes(votes, totalVotes, totalWeight, voteCounts, voteWeights);
                     }
             } catch (ApiException e) {
                     throw e;

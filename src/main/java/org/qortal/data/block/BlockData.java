@@ -1,18 +1,16 @@
 package org.qortal.data.block;
 
 import com.google.common.primitives.Bytes;
-
-import java.io.Serializable;
+import org.qortal.block.BlockChain;
+import org.qortal.crypto.Crypto;
+import org.qortal.settings.Settings;
+import org.qortal.utils.NTP;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-
-import org.qortal.block.BlockChain;
-import org.qortal.settings.Settings;
-import org.qortal.crypto.Crypto;
-import org.qortal.utils.NTP;
+import java.io.Serializable;
 
 // All properties to be converted to JSON via JAX-RS
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -191,8 +189,16 @@ public class BlockData implements Serializable {
 		return this.encodedOnlineAccounts;
 	}
 
+	public void setEncodedOnlineAccounts(byte[] encodedOnlineAccounts) {
+		this.encodedOnlineAccounts = encodedOnlineAccounts;
+	}
+
 	public int getOnlineAccountsCount() {
 		return this.onlineAccountsCount;
+	}
+
+	public void setOnlineAccountsCount(int onlineAccountsCount) {
+		this.onlineAccountsCount = onlineAccountsCount;
 	}
 
 	public Long getOnlineAccountsTimestamp() {

@@ -375,11 +375,15 @@ let res = await qortalRequest({
     prefix: false, // Optional - if true, only the beginning of fields are matched in all of the above filters
     exactMatchNames: true, // Optional - if true, partial name matches are excluded
     default: false, // Optional - if true, only resources without identifiers are returned
+    mode: "LATEST", // Optional - whether to return all resources or just the latest for a name/service combination. Possible values: ALL,LATEST. Default: LATEST
+    minLevel: 1, // Optional - whether to filter results by minimum account level
     includeStatus: false, // Optional - will take time to respond, so only request if necessary
     includeMetadata: false, // Optional - will take time to respond, so only request if necessary
     nameListFilter: "QApp1234Subscriptions", // Optional - will only return results if they are from a name included in supplied list
     followedOnly: false, // Optional - include followed names only
     excludeBlocked: false, // Optional - exclude blocked content
+    // before: 1683546000000, // Optional - limit to resources created before timestamp
+    // after: 1683546000000, // Optional - limit to resources created after timestamp
     limit: 100,
     offset: 0,
     reverse: true
@@ -395,12 +399,16 @@ let res = await qortalRequest({
     identifier: "search query goes here", // Optional - searches only the "identifier" field
     names: ["QortalDemo", "crowetic", "AlphaX"], // Optional - searches only the "name" field for any of the supplied names
     prefix: false, // Optional - if true, only the beginning of fields are matched in all of the above filters
+    exactMatchNames: true, // Optional - if true, partial name matches are excluded
     default: false, // Optional - if true, only resources without identifiers are returned
+    mode: "LATEST", // Optional - whether to return all resources or just the latest for a name/service combination. Possible values: ALL,LATEST. Default: LATEST
     includeStatus: false, // Optional - will take time to respond, so only request if necessary
     includeMetadata: false, // Optional - will take time to respond, so only request if necessary
     nameListFilter: "QApp1234Subscriptions", // Optional - will only return results if they are from a name included in supplied list
     followedOnly: false, // Optional - include followed names only
     excludeBlocked: false, // Optional - exclude blocked content
+    // before: 1683546000000, // Optional - limit to resources created before timestamp
+    // after: 1683546000000, // Optional - limit to resources created after timestamp
     limit: 100,
     offset: 0,
     reverse: true
@@ -576,14 +584,15 @@ let res = await qortalRequest({
 ```
 
 ### Send foreign coin to address
-_Requires user approval_
+_Requires user approval_<br />
+Note: default fees can be found [here](https://github.com/Qortal/qortal-ui/blob/master/plugins/plugins/core/qdn/browser/browser.src.js#L205-L209).
 ```
 let res = await qortalRequest({
     action: "SEND_COIN",
     coin: "LTC",
     destinationAddress: "LSdTvMHRm8sScqwCi6x9wzYQae8JeZhx6y",
     amount: 1.00000000, // 1 LTC
-    fee: 0.00000020 // fee per byte
+    fee: 0.00000020 // Optional fee per byte (default fee used if omitted, recommended) - not used for QORT or ARRR
 });
 ```
 

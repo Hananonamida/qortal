@@ -4,10 +4,9 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.libdohj.params.DogecoinMainNetParams;
-//import org.libdohj.params.DogecoinRegTestParams;
 import org.libdohj.params.DogecoinTestNet3Params;
 import org.qortal.crosschain.ElectrumX.Server;
-import org.qortal.crosschain.ElectrumX.Server.ConnectionType;
+import org.qortal.crosschain.ChainableServer.ConnectionType;
 import org.qortal.settings.Settings;
 
 import java.util.Arrays;
@@ -44,14 +43,14 @@ public class Dogecoin extends Bitcoiny {
 			@Override
 			public Collection<Server> getServers() {
 				return Arrays.asList(
-						// Servers chosen on NO BASIS WHATSOEVER from various sources!
-						// Status verified at https://1209k.com/bitcoin-eye/ele.php?chain=doge
-						new Server("electrum.qortal.link", Server.ConnectionType.SSL, 54002),
-						new Server("electrum-doge.qortal.online", ConnectionType.SSL, 50002),
-						new Server("electrum1-doge.qortal.online", ConnectionType.SSL, 50002),
-						new Server("electrum1.cipig.net", ConnectionType.SSL, 20060),
-						new Server("electrum2.cipig.net", ConnectionType.SSL, 20060),
-						new Server("electrum3.cipig.net", ConnectionType.SSL, 20060));
+					// Servers chosen on NO BASIS WHATSOEVER from various sources!
+					// Status verified at https://1209k.com/bitcoin-eye/ele.php?chain=doge
+					new Server("dogecoin.stackwallet.com", Server.ConnectionType.SSL, 50022),
+					new Server("electrum.qortal.link", Server.ConnectionType.SSL, 54002),
+					new Server("electrum1.cipig.net", Server.ConnectionType.SSL, 20060),
+					new Server("electrum2.cipig.net", Server.ConnectionType.SSL, 20060),
+					new Server("electrum3.cipig.net", Server.ConnectionType.SSL, 20060)
+				);
 			}
 
 			@Override
@@ -95,8 +94,9 @@ public class Dogecoin extends Bitcoiny {
 			@Override
 			public Collection<Server> getServers() {
 				return Arrays.asList(
-						new Server("localhost", ConnectionType.TCP, 50001),
-						new Server("localhost", ConnectionType.SSL, 50002));
+					new Server("localhost", Server.ConnectionType.TCP, 50001),
+					new Server("localhost", Server.ConnectionType.SSL, 50002)
+				);
 			}
 
 			@Override

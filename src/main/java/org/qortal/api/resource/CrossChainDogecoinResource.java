@@ -13,15 +13,18 @@ import org.qortal.api.ApiError;
 import org.qortal.api.ApiErrors;
 import org.qortal.api.ApiExceptionFactory;
 import org.qortal.api.Security;
+import org.qortal.api.model.crosschain.AddressRequest;
 import org.qortal.api.model.crosschain.DogecoinSendRequest;
-import org.qortal.crosschain.ForeignBlockchainException;
+import org.qortal.crosschain.AddressInfo;
 import org.qortal.crosschain.Dogecoin;
+import org.qortal.crosschain.ForeignBlockchainException;
 import org.qortal.crosschain.SimpleTransaction;
+import org.qortal.crosschain.ServerConfigurationInfo;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
-import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -149,39 +152,38 @@ public class CrossChainDogecoinResource {
 	}
 
 	@POST
-	@Path("/unusedaddress")
+	@Path("/addressinfos")
 	@Operation(
-		summary = "Returns first unused address for hierarchical, deterministic BIP32 wallet",
-		description = "Supply BIP32 'm' private/public key in base58, starting with 'xprv'/'xpub' for mainnet, 'tprv'/'tpub' for testnet",
-		requestBody = @RequestBody(
-			required = true,
-			content = @Content(
-				mediaType = MediaType.TEXT_PLAIN,
-				schema = @Schema(
-					type = "string",
-					description = "BIP32 'm' private/public key in base58",
-					example = "tpubD6NzVbkrYhZ4XTPc4btCZ6SMgn8CxmWkj6VBVZ1tfcJfMq4UwAjZbG8U74gGSypL9XBYk2R2BLbDBe8pcEyBKM1edsGQEPKXNbEskZozeZc"
-				)
-			)
-		),
-		responses = {
-			@ApiResponse(
-				content = @Content(array = @ArraySchema( schema = @Schema( implementation = SimpleTransaction.class ) ) )
-			)
-		}
+			summary = "Returns information for each address for a hierarchical, deterministic BIP32 wallet",
+			description = "Supply BIP32 'm' private/public key in base58, starting with 'xprv'/'xpub' for mainnet, 'tprv'/'tpub' for testnet",
+			requestBody = @RequestBody(
+					required = true,
+					content = @Content(
+							mediaType = MediaType.APPLICATION_JSON,
+							schema = @Schema(
+									implementation = AddressRequest.class
+							)
+					)
+			),
+			responses = {
+					@ApiResponse(
+							content = @Content(array = @ArraySchema( schema = @Schema( implementation = AddressInfo.class ) ) )
+					)
+			}
+
 	)
 	@ApiErrors({ApiError.INVALID_PRIVATE_KEY, ApiError.FOREIGN_BLOCKCHAIN_NETWORK_ISSUE})
 	@SecurityRequirement(name = "apiKey")
-	public String getUnusedDogecoinReceiveAddress(@HeaderParam(Security.API_KEY_HEADER) String apiKey, String key58) {
+	public List<AddressInfo> getDogecoinAddressInfos(@HeaderParam(Security.API_KEY_HEADER) String apiKey, AddressRequest addressRequest) {
 		Security.checkApiCallAllowed(request);
 
 		Dogecoin dogecoin = Dogecoin.getInstance();
 
-		if (!dogecoin.isValidDeterministicKey(key58))
+		if (!dogecoin.isValidDeterministicKey(addressRequest.xpub58))
 			throw ApiExceptionFactory.INSTANCE.createException(request, ApiError.INVALID_PRIVATE_KEY);
 
 		try {
-			return dogecoin.getUnusedReceiveAddress(key58);
+			return dogecoin.getWalletAddressInfos(addressRequest.xpub58);
 		} catch (ForeignBlockchainException e) {
 			throw ApiExceptionFactory.INSTANCE.createException(request, ApiError.FOREIGN_BLOCKCHAIN_NETWORK_ISSUE);
 		}
@@ -243,4 +245,24 @@ public class CrossChainDogecoinResource {
 		return spendTransaction.getTxId().toString();
 	}
 
+	@GET
+	@Path("/serverinfos")
+	@Operation(
+			summary = "Returns current Dogecoin server configuration",
+			description = "Returns current Dogecoin server locations and use status",
+			responses = {
+					@ApiResponse(
+							content = @Content(
+									mediaType = MediaType.APPLICATION_JSON,
+									schema = @Schema(
+											implementation = ServerConfigurationInfo.class
+									)
+							)
+					)
+			}
+	)
+	public ServerConfigurationInfo getServerConfiguration() {
+
+		return CrossChainUtils.buildServerConfigurationInfo(Dogecoin.getInstance());
+	}
 }

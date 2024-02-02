@@ -13,7 +13,10 @@ import org.qortal.repository.Repository;
 import org.qortal.utils.Base58;
 
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -24,7 +27,6 @@ import java.util.stream.Collectors;
 public final class SelfSponsorshipAlgoV1Block {
 
 	private static final Logger LOGGER = LogManager.getLogger(SelfSponsorshipAlgoV1Block.class);
-
 
 	private SelfSponsorshipAlgoV1Block() {
 		/* Do not instantiate */

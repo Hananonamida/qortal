@@ -3,10 +3,12 @@ package org.qortal.test;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.qortal.crypto.MemoryPoW;
-
-import static org.junit.Assert.*;
+import org.qortal.repository.DataException;
+import org.qortal.test.common.Common;
 
 import java.util.Random;
+
+import static org.junit.Assert.*;
 
 @Ignore
 public class MemoryPoWTests {
@@ -39,13 +41,14 @@ public class MemoryPoWTests {
 	}
 
 	@Test
-	public void testMultipleComputes() {
+	public void testMultipleComputes() throws DataException {
+		Common.useDefaultSettings();
 		Random random = new Random();
 
-		final int sampleSize = 20;
+		final int sampleSize = 10;
 		final long stddevDivisor = sampleSize * (sampleSize - 1);
 
-		for (int difficulty = 8; difficulty < 16; difficulty += 2) {
+		for (int difficulty = 8; difficulty <= 16; difficulty++) {
 			byte[] data = new byte[256];
 			long[] times = new long[sampleSize];
 

@@ -1,9 +1,5 @@
 package org.qortal.repository;
 
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-
 import org.qortal.api.resource.TransactionsResource.ConfirmationStatus;
 import org.qortal.arbitrary.misc.Service;
 import org.qortal.data.group.GroupApprovalData;
@@ -11,6 +7,10 @@ import org.qortal.data.transaction.GroupApprovalTransactionData;
 import org.qortal.data.transaction.TransactionData;
 import org.qortal.data.transaction.TransferAssetTransactionData;
 import org.qortal.transaction.Transaction.TransactionType;
+
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
 
 public interface TransactionRepository {
 
@@ -314,7 +314,7 @@ public interface TransactionRepository {
 	 * @return list of transactions, or empty if none.
 	 * @throws DataException
 	 */
-	public List<TransactionData> getUnconfirmedTransactions(EnumSet<TransactionType> excludedTxTypes) throws DataException;
+	public List<TransactionData> getUnconfirmedTransactions(EnumSet<TransactionType> excludedTxTypes, Integer limit) throws DataException;
 
 	/**
 	 * Remove transaction from unconfirmed transactions pile.

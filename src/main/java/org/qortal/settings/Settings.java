@@ -1,12 +1,20 @@
 package org.qortal.settings;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.Reader;
-import java.nio.file.Paths;
-import java.util.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.eclipse.persistence.exceptions.XMLMarshalException;
+import org.eclipse.persistence.jaxb.JAXBContextFactory;
+import org.eclipse.persistence.jaxb.UnmarshallerProperties;
+import org.qortal.block.BlockChain;
+import org.qortal.controller.arbitrary.ArbitraryDataStorageManager.StoragePolicy;
+import org.qortal.crosschain.Bitcoin.BitcoinNet;
+import org.qortal.crosschain.Digibyte.DigibyteNet;
+import org.qortal.crosschain.Dogecoin.DogecoinNet;
+import org.qortal.crosschain.Litecoin.LitecoinNet;
+import org.qortal.crosschain.PirateChain.PirateChainNet;
+import org.qortal.crosschain.Ravencoin.RavencoinNet;
+import org.qortal.network.message.MessageType;
+import org.qortal.utils.EnumUtils;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -15,21 +23,9 @@ import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.transform.stream.StreamSource;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.eclipse.persistence.exceptions.XMLMarshalException;
-import org.eclipse.persistence.jaxb.JAXBContextFactory;
-import org.eclipse.persistence.jaxb.UnmarshallerProperties;
-import org.qortal.block.BlockChain;
-import org.qortal.controller.arbitrary.ArbitraryDataStorageManager.*;
-import org.qortal.crosschain.Bitcoin.BitcoinNet;
-import org.qortal.crosschain.Litecoin.LitecoinNet;
-import org.qortal.crosschain.Dogecoin.DogecoinNet;
-import org.qortal.crosschain.Digibyte.DigibyteNet;
-import org.qortal.crosschain.Ravencoin.RavencoinNet;
-import org.qortal.crosschain.PirateChain.PirateChainNet;
-import org.qortal.utils.EnumUtils;
+import java.io.*;
+import java.nio.file.Paths;
+import java.util.*;
 
 // All properties to be converted to JSON via JAXB
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -47,6 +43,9 @@ public class Settings {
 	private static final int MAINNET_GATEWAY_PORT = 80;
 	private static final int TESTNET_GATEWAY_PORT = 8080;
 
+	private static final int MAINNET_DEV_PROXY_PORT = 12393;
+	private static final int TESTNET_DEV_PROXY_PORT = 62393;
+
 	private static final Logger LOGGER = LogManager.getLogger(Settings.class);
 	private static final String SETTINGS_FILENAME = "settings.json";
 
@@ -62,16 +61,6 @@ public class Settings {
 	// Common to all networking (API/P2P)
 	private String bindAddress = "::"; // Use IPv6 wildcard to listen on all local addresses
 	private String bindAddressFallback = "0.0.0.0"; // Some systems are unable to bind using IPv6
-
-	// UI servers
-	private int uiPort = 12388;
-	private String[] uiLocalServers = new String[] {
-		"localhost", "127.0.0.1"
-	};
-	private String[] uiRemoteServers = new String[] {
-		"node1.qortal.org", "node2.qortal.org", "node3.qortal.org", "node4.qortal.org", "node5.qortal.org",
-		"node6.qortal.org", "node7.qortal.org", "node8.qortal.org", "node9.qortal.org", "node10.qortal.org"
-	};
 
 	// API-related
 	private boolean apiEnabled = true;
@@ -107,6 +96,10 @@ public class Settings {
 	private boolean gatewayLoggingEnabled = false;
 	private boolean gatewayLoopbackEnabled = false;
 
+	// Developer Proxy
+	private Integer devProxyPort;
+	private boolean devProxyLoggingEnabled = false;
+
 	// Specific to this node
 	private boolean wipeUnconfirmedOnStart = false;
 	/** Maximum number of unconfirmed transactions allowed per account */
@@ -135,8 +128,11 @@ public class Settings {
 	private long repositoryCheckpointInterval = 60 * 60 * 1000L; // 1 hour (ms) default
 	/** Whether to show a notification when we perform repository 'checkpoint'. */
 	private boolean showCheckpointNotification = false;
-	/* How many blocks to cache locally. Defaulted to 10, which covers a typical Synchronizer request + a few spare */
-	private int blockCacheSize = 10;
+	/* How many blocks to cache locally. Defaulted to 10, which covers a typical Synchronizer request + a few spare - increased to 100 */
+	private int blockCacheSize = 100;
+
+	/** Maximum number of transactions for the block minter to include in a block */
+	private int maxTransactionsPerBlock = 100;
 
 	/** How long to keep old, full, AT state data (ms). */
 	private long atStatesMaxLifetime = 5 * 24 * 60 * 60 * 1000L; // milliseconds
@@ -158,7 +154,7 @@ public class Settings {
 	private boolean lite = false;
 
 	/** Whether we should prune old data to reduce database size
-	 * This prevents the node from being able to serve older blocks */
+	 * This prevents the node from being able to serve older blocks - No longer used */
 	private boolean topOnly = false;
 	/** The amount of recent blocks we should keep when pruning */
 	private int pruneBlockLimit = 6000;
@@ -175,7 +171,6 @@ public class Settings {
 	 * This has a significant effect on execution time. */
 	private int blockPruneBatchSize = 10000; // blocks
 
-
 	/** Whether we should archive old data to reduce the database size */
 	private boolean archiveEnabled = true;
 	/** How often to attempt archiving (ms). */
@@ -183,14 +178,11 @@ public class Settings {
 	/** Serialization version to use when building an archive */
 	private int defaultArchiveVersion = 2;
 
-
 	/** Whether to automatically bootstrap instead of syncing from genesis */
 	private boolean bootstrap = true;
 
-
 	/** Registered names integrity check */
 	private boolean namesIntegrityCheckEnabled = false;
-
 
 	// Peer-to-peer related
 	private boolean isTestNet = false;
@@ -203,23 +195,23 @@ public class Settings {
 	/** Minimum number of peers to allow block minting / synchronization. */
 	private int minBlockchainPeers = 3;
 	/** Target number of outbound connections to peers we should make. */
-	private int minOutboundPeers = 16;
+	private int minOutboundPeers = 32;
 	/** Maximum number of peer connections we allow. */
-	private int maxPeers = 40;
+	private int maxPeers = 60;
 	/** Number of slots to reserve for short-lived QDN data transfers */
-	private int maxDataPeers = 4;
+	private int maxDataPeers = 5;
 	/** Maximum number of threads for network engine. */
-	private int maxNetworkThreadPoolSize = 120;
+	private int maxNetworkThreadPoolSize = 620;
 	/** Maximum number of threads for network proof-of-work compute, used during handshaking. */
 	private int networkPoWComputePoolSize = 2;
 	/** Maximum number of retry attempts if a peer fails to respond with the requested data */
 	private int maxRetries = 2;
 
 	/** The number of seconds of no activity before recovery mode begins */
-	public long recoveryModeTimeout = 24 * 60 * 60 * 1000L;
+	public long recoveryModeTimeout = 9999999999999L;
 
 	/** Minimum peer version number required in order to sync with them */
-	private String minPeerVersion = "4.1.1";
+	private String minPeerVersion = "4.4.2";
 	/** Whether to allow connections with peers below minPeerVersion
 	 * If true, we won't sync with them but they can still sync with us, and will show in the peers list
 	 * If false, sync will be blocked both ways, and they will not appear in the peers list */
@@ -267,7 +259,7 @@ public class Settings {
 	/** Repository storage path. */
 	private String repositoryPath = "db";
 	/** Repository connection pool size. Needs to be a bit bigger than maxNetworkThreadPoolSize */
-	private int repositoryConnectionPoolSize = 240;
+	private int repositoryConnectionPoolSize = 1920;
 	private List<String> fixedNetwork;
 
 	// Export/import
@@ -278,10 +270,9 @@ public class Settings {
 
 	// Bootstrap sources
 	private String[] bootstrapHosts = new String[] {
-			"http://bootstrap.qortal.org",
-			"http://bootstrap2.qortal.org",
-			"http://bootstrap3.qortal.org",
-			"http://bootstrap.qortal.online"
+		"http://bootstrap.qortal.org",
+		"http://bootstrap2.qortal.org",
+		"http://bootstrap3.qortal.org"
 	};
 
 	// Auto-update sources
@@ -300,16 +291,34 @@ public class Settings {
 		"1.pool.ntp.org",
 		"2.pool.ntp.org",
 		"3.pool.ntp.org",
-		"cn.pool.ntp.org",
-		"0.cn.pool.ntp.org",
-		"1.cn.pool.ntp.org",
-		"2.cn.pool.ntp.org",
-		"3.cn.pool.ntp.org"
+		"asia.pool.ntp.org",
+		"0.asia.pool.ntp.org",
+		"1.asia.pool.ntp.org",
+		"2.asia.pool.ntp.org",
+		"3.asia.pool.ntp.org",
+		"europe.pool.ntp.org",
+		"0.europe.pool.ntp.org",
+		"1.europe.pool.ntp.org",
+		"2.europe.pool.ntp.org",
+		"3.europe.pool.ntp.org",
+		"north-america.pool.ntp.org",
+		"0.north-america.pool.ntp.org",
+		"1.north-america.pool.ntp.org",
+		"2.north-america.pool.ntp.org",
+		"3.north-america.pool.ntp.org",
+		"oceania.pool.ntp.org",
+		"0.oceania.pool.ntp.org",
+		"1.oceania.pool.ntp.org",
+		"2.oceania.pool.ntp.org",
+		"3.oceania.pool.ntp.org",
+		"south-america.pool.ntp.org",
+		"0.south-america.pool.ntp.org",
+		"1.south-america.pool.ntp.org",
+		"2.south-america.pool.ntp.org",
+		"3.south-america.pool.ntp.org"
 	};
 	/** Additional offset added to values returned by NTP.getTime() */
 	private Long testNtpOffset = null;
-
-
 
 	/* Foreign chains */
 
@@ -318,8 +327,6 @@ public class Settings {
 
 	/** How many wallet keys to generate when using bitcoinj as the blockchain interface (e.g. when sending coins) */
 	private int bitcoinjLookaheadSize = 50;
-
-
 
 	// Data storage (QDN)
 
@@ -352,13 +359,65 @@ public class Settings {
 	/** Whether to allow public (decryptable) data to be stored */
 	private boolean publicDataEnabled = true;
 	/** Whether to allow private (non-decryptable) data to be stored */
-	private boolean privateDataEnabled = false;
+	private boolean privateDataEnabled = true;
 
 	/** Maximum total size of hosted data, in bytes. Unlimited if null */
 	private Long maxStorageCapacity = null;
 
 	/** Whether to serve QDN data without authentication */
 	private boolean qdnAuthBypassEnabled = true;
+
+	/** Limit threads per message type */
+	private Set<ThreadLimit> maxThreadsPerMessageType = new HashSet<>();
+
+	/** The number of threads per message type at which a warning should be logged.
+	 * Exclude from settings.json to disable this warning. */
+	private Integer threadCountPerMessageTypeWarningThreshold = null;
+
+
+	// Domain mapping
+	public static class ThreadLimit {
+		private String messageType;
+		private Integer limit;
+
+		private ThreadLimit() { // makes JAXB happy; will never be invoked
+		}
+
+		private ThreadLimit(String messageType, Integer limit) {
+			this.messageType = messageType;
+			this.limit = limit;
+		}
+
+		public String getMessageType() {
+			return messageType;
+		}
+
+		public void setMessageType(String messageType) {
+			this.messageType = messageType;
+		}
+
+		public Integer getLimit() {
+			return limit;
+		}
+
+		public void setLimit(Integer limit) {
+			this.limit = limit;
+		}
+
+		@Override
+		public boolean equals(Object other) {
+			if (!(other instanceof ThreadLimit))
+				return false;
+
+			return this.messageType.equals(((ThreadLimit) other).getMessageType());
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(messageType);
+		}
+	}
+
 
 	// Domain mapping
 	public static class DomainMap {
@@ -384,7 +443,6 @@ public class Settings {
 			this.name = name;
 		}
 	}
-
 
 	// Constructors
 
@@ -486,6 +544,9 @@ public class Settings {
 			}
 		} while (settings.userPath != null);
 
+		// Set some additional defaults if needed
+		settings.setAdditionalDefaults();
+
 		// Validate settings
 		settings.validate();
 
@@ -522,6 +583,22 @@ public class Settings {
 		}
 	}
 
+	private void setAdditionalDefaults() {
+		// Populate defaults for maxThreadsPerMessageType. If any are specified in settings.json, they will take priority.
+		maxThreadsPerMessageType.add(new ThreadLimit("ARBITRARY_DATA_FILE", 5));
+		maxThreadsPerMessageType.add(new ThreadLimit("GET_ARBITRARY_DATA_FILE", 5));
+		maxThreadsPerMessageType.add(new ThreadLimit("ARBITRARY_DATA", 5));
+		maxThreadsPerMessageType.add(new ThreadLimit("GET_ARBITRARY_DATA", 5));
+		maxThreadsPerMessageType.add(new ThreadLimit("ARBITRARY_DATA_FILE_LIST", 5));
+		maxThreadsPerMessageType.add(new ThreadLimit("GET_ARBITRARY_DATA_FILE_LIST", 5));
+		maxThreadsPerMessageType.add(new ThreadLimit("ARBITRARY_SIGNATURES", 5));
+		maxThreadsPerMessageType.add(new ThreadLimit("ARBITRARY_METADATA", 5));
+		maxThreadsPerMessageType.add(new ThreadLimit("GET_ARBITRARY_METADATA", 5));
+		maxThreadsPerMessageType.add(new ThreadLimit("GET_TRANSACTION", 10));
+		maxThreadsPerMessageType.add(new ThreadLimit("TRANSACTION_SIGNATURES", 5));
+		maxThreadsPerMessageType.add(new ThreadLimit("TRADE_PRESENCES", 5));
+	}
+
 	// Getters / setters
 
 	public String getUserPath() {
@@ -530,18 +607,6 @@ public class Settings {
 
 	public String getLocaleLang() {
 		return this.localeLang;
-	}
-
-	public int getUiServerPort() {
-		return this.uiPort;
-	}
-
-	public String[] getLocalUiServers() {
-		return this.uiLocalServers;
-	}
-
-	public String[] getRemoteUiServers() {
-		return this.uiRemoteServers;
 	}
 
 	public boolean isApiEnabled() {
@@ -649,6 +714,17 @@ public class Settings {
 	}
 
 
+	public int getDevProxyPort() {
+		if (this.devProxyPort != null)
+			return this.devProxyPort;
+
+		return this.isTestNet ? TESTNET_DEV_PROXY_PORT : MAINNET_DEV_PROXY_PORT;
+	}
+
+	public boolean isDevProxyLoggingEnabled() {
+		return this.devProxyLoggingEnabled;
+	}
+
 	public boolean getWipeUnconfirmedOnStart() {
 		return this.wipeUnconfirmedOnStart;
 	}
@@ -671,6 +747,10 @@ public class Settings {
 
 	public int getBlockCacheSize() {
 		return this.blockCacheSize;
+	}
+
+	public int getMaxTransactionsPerBlock() {
+		return this.maxTransactionsPerBlock;
 	}
 
 	public boolean isTestNet() {
@@ -914,7 +994,9 @@ public class Settings {
 	}
 
 	public int getPruneBlockLimit() {
-		return this.pruneBlockLimit;
+		// Never prune more than twice the block reward batch size, as the data is needed when processing/orphaning
+		int minPruneBlockLimit = BlockChain.getInstance().getBlockRewardBatchSize() * 2;
+		return Math.max(this.pruneBlockLimit, minPruneBlockLimit);
 	}
 
 	public long getAtStatesPruneInterval() {
@@ -1026,5 +1108,21 @@ public class Settings {
 			return true;
 		}
 		return this.qdnAuthBypassEnabled;
+	}
+
+	public Integer getMaxThreadsForMessageType(MessageType messageType) {
+		if (maxThreadsPerMessageType != null) {
+			for (ThreadLimit threadLimit : maxThreadsPerMessageType) {
+				if (threadLimit.getMessageType().equals(messageType.name())) {
+					return threadLimit.getLimit();
+				}
+			}
+		}
+		// No entry, so assume unlimited
+		return null;
+	}
+
+	public Integer getThreadCountPerMessageTypeWarningThreshold() {
+		return this.threadCountPerMessageTypeWarningThreshold;
 	}
 }

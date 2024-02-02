@@ -1,5 +1,14 @@
 package org.qortal;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
+import org.qortal.api.ApiKey;
+import org.qortal.api.ApiRequest;
+import org.qortal.controller.AutoUpdate;
+import org.qortal.settings.Settings;
+
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
@@ -9,15 +18,6 @@ import java.nio.file.StandardCopyOption;
 import java.security.Security;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
-import org.qortal.api.ApiKey;
-import org.qortal.api.ApiRequest;
-import org.qortal.controller.AutoUpdate;
-import org.qortal.settings.Settings;
 
 import static org.qortal.controller.AutoUpdate.AGENTLIB_JVM_HOLDER_ARG;
 
@@ -38,7 +38,7 @@ public class ApplyUpdate {
 	private static final String NEW_JAR_FILENAME = AutoUpdate.NEW_JAR_FILENAME;
 	private static final String WINDOWS_EXE_LAUNCHER = "qortal.exe";
 	private static final String JAVA_TOOL_OPTIONS_NAME = "JAVA_TOOL_OPTIONS";
-	private static final String JAVA_TOOL_OPTIONS_VALUE = "-XX:MaxRAMFraction=4";
+	private static final String JAVA_TOOL_OPTIONS_VALUE = "";
 
 	private static final long CHECK_INTERVAL = 30 * 1000L; // ms
 	private static final int MAX_ATTEMPTS = 12;
@@ -139,7 +139,7 @@ public class ApplyUpdate {
 			apiKey.delete();
 
 		} catch (IOException e) {
-			LOGGER.info("Error loading or deleting API key: {}", e.getMessage());
+			LOGGER.error("Error loading or deleting API key: {}", e.getMessage());
 		}
 	}
 
@@ -181,13 +181,13 @@ public class ApplyUpdate {
 
 	private static void restartNode(String[] args) {
 		String javaHome = System.getProperty("java.home");
-		LOGGER.info(() -> String.format("Java home: %s", javaHome));
+		LOGGER.debug(() -> String.format("Java home: %s", javaHome));
 
 		Path javaBinary = Paths.get(javaHome, "bin", "java");
-		LOGGER.info(() -> String.format("Java binary: %s", javaBinary));
+		LOGGER.debug(() -> String.format("Java binary: %s", javaBinary));
 
 		Path exeLauncher = Paths.get(WINDOWS_EXE_LAUNCHER);
-		LOGGER.info(() -> String.format("Windows EXE launcher: %s", exeLauncher));
+		LOGGER.debug(() -> String.format("Windows EXE launcher: %s", exeLauncher));
 
 		List<String> javaCmd;
 		if (Files.exists(exeLauncher)) {
@@ -213,12 +213,12 @@ public class ApplyUpdate {
 		}
 
 		try {
-			LOGGER.info(String.format("Restarting node with: %s", String.join(" ", javaCmd)));
+			LOGGER.debug(String.format("Restarting node with: %s", String.join(" ", javaCmd)));
 
 			ProcessBuilder processBuilder = new ProcessBuilder(javaCmd);
 
 			if (Files.exists(exeLauncher)) {
-				LOGGER.info(() -> String.format("Setting env %s to %s", JAVA_TOOL_OPTIONS_NAME, JAVA_TOOL_OPTIONS_VALUE));
+				LOGGER.debug(() -> String.format("Setting env %s to %s", JAVA_TOOL_OPTIONS_NAME, JAVA_TOOL_OPTIONS_VALUE));
 				processBuilder.environment().put(JAVA_TOOL_OPTIONS_NAME, JAVA_TOOL_OPTIONS_VALUE);
 			}
 

@@ -1,25 +1,20 @@
 package org.qortal.network;
 
-import java.util.Arrays;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.regex.Matcher;
-
+import com.google.common.primitives.Bytes;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.qortal.controller.Controller;
 import org.qortal.crypto.Crypto;
 import org.qortal.crypto.MemoryPoW;
-import org.qortal.network.message.ChallengeMessage;
-import org.qortal.network.message.HelloMessage;
-import org.qortal.network.message.Message;
-import org.qortal.network.message.MessageType;
+import org.qortal.network.message.*;
 import org.qortal.settings.Settings;
-import org.qortal.network.message.ResponseMessage;
 import org.qortal.utils.DaemonThreadFactory;
 import org.qortal.utils.NTP;
 
-import com.google.common.primitives.Bytes;
+import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
 
 public enum Handshake {
 	STARTED(null) {
@@ -265,7 +260,7 @@ public enum Handshake {
 	private static final long PEER_VERSION_131 = 0x0100030001L;
 
 	/** Minimum peer version that we are allowed to communicate with */
-	private static final String MIN_PEER_VERSION = "4.0.0";
+	private static final String MIN_PEER_VERSION = "4.1.1";
 
 	private static final int POW_BUFFER_SIZE_PRE_131 = 8 * 1024 * 1024; // bytes
 	private static final int POW_DIFFICULTY_PRE_131 = 8; // leading zero bits

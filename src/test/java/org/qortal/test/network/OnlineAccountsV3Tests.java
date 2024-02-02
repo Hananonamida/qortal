@@ -2,11 +2,12 @@ package org.qortal.test.network;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.qortal.controller.OnlineAccountsManager;
 import org.qortal.data.network.OnlineAccountData;
-import org.qortal.network.message.*;
+import org.qortal.network.message.GetOnlineAccountsV3Message;
+import org.qortal.network.message.Message;
+import org.qortal.network.message.MessageException;
 import org.qortal.transform.Transformer;
 
 import java.nio.ByteBuffer;
@@ -24,41 +25,6 @@ public class OnlineAccountsV3Tests {
 
         Security.insertProviderAt(new BouncyCastleProvider(), 0);
         Security.insertProviderAt(new BouncyCastleJsseProvider(), 1);
-    }
-
-    @Ignore("For informational use")
-    @Test
-    public void compareV2ToV3() throws MessageException {
-        List<OnlineAccountData> onlineAccounts = generateOnlineAccounts(false);
-
-        // How many of each timestamp and leading byte (of public key)
-        Map<Long, Map<Byte, byte[]>> hashesByTimestampThenByte = convertToHashMaps(onlineAccounts);
-
-        byte[] v3DataBytes = new GetOnlineAccountsV3Message(hashesByTimestampThenByte).toBytes();
-        int v3ByteSize = v3DataBytes.length;
-
-        byte[] v2DataBytes = new GetOnlineAccountsV2Message(onlineAccounts).toBytes();
-        int v2ByteSize = v2DataBytes.length;
-
-        int numTimestamps = hashesByTimestampThenByte.size();
-        System.out.printf("For %d accounts split across %d timestamp%s: V2 size %d vs V3 size %d%n",
-                onlineAccounts.size(),
-                numTimestamps,
-                numTimestamps != 1 ? "s" : "",
-                v2ByteSize,
-                v3ByteSize
-        );
-
-        for (var outerMapEntry : hashesByTimestampThenByte.entrySet()) {
-            long timestamp = outerMapEntry.getKey();
-
-            var innerMap = outerMapEntry.getValue();
-
-            System.out.printf("For timestamp %d: %d / 256 slots used.%n",
-                    timestamp,
-                    innerMap.size()
-            );
-        }
     }
 
     private Map<Long, Map<Byte, byte[]>> convertToHashMaps(List<OnlineAccountData> onlineAccounts) {
@@ -200,7 +166,9 @@ public class OnlineAccountsV3Tests {
                 byte[] pubkey = new byte[Transformer.PUBLIC_KEY_LENGTH];
                 RANDOM.nextBytes(pubkey);
 
-                onlineAccounts.add(new OnlineAccountData(timestamp, sig, pubkey));
+                Integer nonce = RANDOM.nextInt();
+
+                onlineAccounts.add(new OnlineAccountData(timestamp, sig, pubkey, nonce));
             }
         }
 

@@ -16,7 +16,9 @@ import org.qortal.data.account.RewardShareData;
 import org.qortal.data.network.OnlineAccountData;
 import org.qortal.network.Network;
 import org.qortal.network.Peer;
-import org.qortal.network.message.*;
+import org.qortal.network.message.GetOnlineAccountsV3Message;
+import org.qortal.network.message.Message;
+import org.qortal.network.message.OnlineAccountsV3Message;
 import org.qortal.repository.DataException;
 import org.qortal.repository.Repository;
 import org.qortal.repository.RepositoryManager;
@@ -414,7 +416,7 @@ public class OnlineAccountsManager {
         boolean isSuperiorEntry = isOnlineAccountsDataSuperior(onlineAccountData);
         if (isSuperiorEntry)
             // Remove existing inferior entry so it can be re-added below (it's likely the existing copy is missing a nonce value)
-            onlineAccounts.remove(onlineAccountData);
+            onlineAccounts.removeIf(a -> Objects.equals(a.getPublicKey(), onlineAccountData.getPublicKey()));
 
         boolean isNewEntry = onlineAccounts.add(onlineAccountData);
 
@@ -775,6 +777,13 @@ public class OnlineAccountsManager {
             else
                 this.latestBlocksOnlineAccounts.remove(this.latestBlocksOnlineAccounts.lastKey());
         }
+    }
+
+
+    // Utils
+
+    public void removeAllOnlineAccounts() {
+        this.currentOnlineAccounts.clear();
     }
 
 

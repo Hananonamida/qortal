@@ -1,9 +1,5 @@
 package org.qortal.test.naming;
 
-import static org.junit.Assert.*;
-
-import java.util.Random;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,7 +18,10 @@ import org.qortal.test.common.TransactionUtils;
 import org.qortal.test.common.transaction.TestTransaction;
 import org.qortal.transaction.RegisterNameTransaction;
 import org.qortal.utils.Amounts;
-import org.qortal.utils.NTP;
+
+import java.util.Random;
+
+import static org.junit.Assert.*;
 
 public class BuySellTests extends Common {
 
@@ -44,7 +43,7 @@ public class BuySellTests extends Common {
 		bob = Common.getTestAccount(repository, "bob");
 
 		name = "test name" + " " + random.nextInt(1_000_000);
-		price = random.nextInt(1000) * Amounts.MULTIPLIER;
+		price = (random.nextInt(1000) + 1) * Amounts.MULTIPLIER;
 	}
 
 	@After

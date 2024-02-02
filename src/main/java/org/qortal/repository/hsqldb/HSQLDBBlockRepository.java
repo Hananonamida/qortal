@@ -1,20 +1,19 @@
 package org.qortal.repository.hsqldb;
 
+import org.qortal.api.model.BlockSignerSummary;
+import org.qortal.data.block.BlockData;
+import org.qortal.data.block.BlockSummaryData;
+import org.qortal.data.block.BlockTransactionData;
+import org.qortal.data.transaction.TransactionData;
+import org.qortal.repository.BlockRepository;
+import org.qortal.repository.DataException;
+import org.qortal.repository.TransactionRepository;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.qortal.api.model.BlockSignerSummary;
-import org.qortal.data.block.BlockData;
-import org.qortal.data.block.BlockSummaryData;
-import org.qortal.data.block.BlockTransactionData;
-import org.qortal.data.block.BlockArchiveData;
-import org.qortal.data.transaction.TransactionData;
-import org.qortal.repository.BlockRepository;
-import org.qortal.repository.DataException;
-import org.qortal.repository.TransactionRepository;
 
 public class HSQLDBBlockRepository implements BlockRepository {
 
@@ -354,6 +353,36 @@ public class HSQLDBBlockRepository implements BlockRepository {
 			return blockData;
 		} catch (SQLException e) {
 			throw new DataException("Unable to fetch height-ranged blocks from repository", e);
+		}
+	}
+
+	@Override
+	public Long getTotalFeesInBlockRange(int firstBlockHeight, int lastBlockHeight) throws DataException {
+		String sql = "SELECT SUM(total_fees) AS sum_total_fees FROM Blocks WHERE height BETWEEN ? AND ?";
+
+		try (ResultSet resultSet = this.repository.checkedExecute(sql, firstBlockHeight, lastBlockHeight)) {
+			if (resultSet == null)
+				return null;
+
+			long totalFees = resultSet.getLong(1);
+
+			return totalFees;
+		} catch (SQLException e) {
+			throw new DataException("Error fetching total fees in block range from repository", e);
+		}
+	}
+
+	@Override
+	public BlockData getBlockInRangeWithHighestOnlineAccountsCount(int firstBlockHeight, int lastBlockHeight) throws DataException {
+		String sql = "SELECT " + BLOCK_DB_COLUMNS + " FROM Blocks WHERE height BETWEEN ? AND ? "
+				+ "ORDER BY online_accounts_count DESC, height ASC "
+				+ "LIMIT 1";
+
+		try (ResultSet resultSet = this.repository.checkedExecute(sql, firstBlockHeight, lastBlockHeight)) {
+			return getBlockFromResultSet(resultSet);
+
+		} catch (SQLException e) {
+			throw new DataException("Error fetching highest online accounts block in range from repository", e);
 		}
 	}
 
